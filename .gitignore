@@ -1,0 +1,33 @@
+# Maven target directories
+target/
+**/target/
+
+# IDE files
+.idea/
+**/.idea/
+*.iml
+**/*.iml
+.vscode/
+**/.vscode/
+.settings/
+.project
+.classpath
+
+# Compiled class and jar files
+*.class
+*.jar
+*.war
+
+# Log files
+*.log
+logs/
+**/logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker / DB data
+postgres_data/
+kafka_data/

@@ -1,0 +1,24 @@
+CREATE TABLE IF NOT EXISTS orders (
+    id VARCHAR(36) PRIMARY KEY,
+    customer_id VARCHAR(100) NOT NULL,
+    items_json TEXT NOT NULL,
+    total_amount NUMERIC(12, 2) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    failure_reason TEXT,
+    warehouse_lat DOUBLE PRECISION DEFAULT 11.0168,
+    warehouse_lon DOUBLE PRECISION DEFAULT 76.9558,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS saga_log (
+    id BIGSERIAL PRIMARY KEY,
+    order_id VARCHAR(36) NOT NULL,
+    step VARCHAR(100) NOT NULL,
+    event_id VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
+CREATE INDEX IF NOT EXISTS idx_saga_log_order_id ON saga_log(order_id);
