@@ -61,7 +61,7 @@ for ($i = 1; $i -le $TotalOrders; $i++) {
     try {
         $res = Invoke-RestMethod -Uri "$GatewayUrl/api/orders" -Method Post -Body $body -ContentType "application/json"
     } catch {
-        Write-Warning "Failed placing order $i: $_"
+        Write-Warning "Failed placing order $($i): $_"
     }
 
     if ($i % 20 -eq 0) {
@@ -112,11 +112,17 @@ $currentInventory = Invoke-RestMethod -Uri "$GatewayUrl/api/inventory" -Method G
 # Calculate completed order item consumption per SKU
 $completedConsumption = @{}
 foreach ($ord in $completed) {
-    foreach ($item in $ord.items) {
+    $items = @()
+    if ($ord.items) {
+        $items = $ord.items
+    } elseif ($ord.itemsJson) {
+        $items = $ord.itemsJson | ConvertFrom-Json
+    }
+    foreach ($item in $items) {
         if (-not $completedConsumption.ContainsKey($item.sku)) {
             $completedConsumption[$item.sku] = 0
         }
-        $completedConsumption[$item.sku] += $item.quantity
+        $completedConsumption[$item.sku] += [int]$item.quantity
     }
 }
 

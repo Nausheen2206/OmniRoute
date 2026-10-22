@@ -114,7 +114,13 @@ except Exception as e:
 completed_usage = {}
 for o in orders:
     if o.get('status') == 'COMPLETED':
-        for it in o.get('items', []):
+        raw_items = o.get('items')
+        if not raw_items and o.get('itemsJson'):
+            try:
+                raw_items = json.loads(o.get('itemsJson'))
+            except:
+                raw_items = []
+        for it in (raw_items or []):
             sku = it.get('sku')
             qty = it.get('quantity', 0)
             completed_usage[sku] = completed_usage.get(sku, 0) + qty
