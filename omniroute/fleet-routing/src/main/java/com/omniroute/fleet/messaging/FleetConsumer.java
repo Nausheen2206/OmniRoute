@@ -22,10 +22,12 @@ public class FleetConsumer {
 
     private final FleetRoutingEngine routingEngine;
     private final FleetProducer producer;
+    private final com.omniroute.fleet.metrics.FleetMetrics metrics;
 
-    public FleetConsumer(FleetRoutingEngine routingEngine, FleetProducer producer) {
+    public FleetConsumer(FleetRoutingEngine routingEngine, FleetProducer producer, com.omniroute.fleet.metrics.FleetMetrics metrics) {
         this.routingEngine = routingEngine;
         this.producer = producer;
+        this.metrics = metrics;
     }
 
     @KafkaListener(topics = Topics.FLEET_GPS, groupId = "fleet-routing-gps-group")
@@ -41,10 +43,11 @@ public class FleetConsumer {
             MDC.put("orderId", allocated.orderId());
             try {
                 log.info("Received OrderAllocated for order {}. Searching nearest truck...", allocated.orderId());
-                Optional<Assignment> assignmentOpt = routingEngine.assignNearestTruck(
-                        allocated.orderId(), allocated.warehouseLat(), allocated.warehouseLon());
+                Optional<Assignment> assignmentOpt = metrics.recordRoutingTime(() ->
+                        routingEngine.assignNearestTruck(allocated.orderId(), allocated.warehouseLat(), allocated.warehouseLon()));
 
                 if (assignmentOpt.isPresent()) {
+                    metrics.recordAssignment();
                     Assignment assignment = assignmentOpt.get();
                     log.info("Assigned truck {} to order {} (dist: {} km)",
                             assignment.truckId(), allocated.orderId(), assignment.distanceKm());

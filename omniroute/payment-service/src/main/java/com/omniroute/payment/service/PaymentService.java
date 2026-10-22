@@ -29,6 +29,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final ProcessedEventRepository processedEventRepository;
     private final PaymentEventProducer producer;
+    private final com.omniroute.payment.metrics.PaymentMetrics paymentMetrics;
     private final Random random = new Random();
 
     @Value("${payment.failure-rate:0.0}")
@@ -39,10 +40,12 @@ public class PaymentService {
 
     public PaymentService(PaymentRepository paymentRepository,
                           ProcessedEventRepository processedEventRepository,
-                          PaymentEventProducer producer) {
+                          PaymentEventProducer producer,
+                          com.omniroute.payment.metrics.PaymentMetrics paymentMetrics) {
         this.paymentRepository = paymentRepository;
         this.processedEventRepository = processedEventRepository;
         this.producer = producer;
+        this.paymentMetrics = paymentMetrics;
     }
 
     @Transactional
@@ -87,12 +90,14 @@ public class PaymentService {
                 log.info("Payment FAILED for order {}: {}", event.orderId(), reason);
                 Payment payment = new Payment(event.orderId(), PaymentStatus.FAILED, event.amount(), reason);
                 paymentRepository.save(payment);
+                paymentMetrics.recordFailure(reason);
 
                 producer.publishPaymentFailed(new PaymentFailed(event.orderId(), reason));
             } else {
                 log.info("Payment SUCCESS for order {}, amount {}", event.orderId(), event.amount());
                 Payment payment = new Payment(event.orderId(), PaymentStatus.CHARGED, event.amount(), "Payment successful");
                 paymentRepository.save(payment);
+                paymentMetrics.recordCharge();
 
                 producer.publishPaymentCompleted(new PaymentCompleted(event.orderId()));
             }
@@ -137,6 +142,7 @@ public class PaymentService {
                 Payment payment = new Payment(event.orderId(), PaymentStatus.REFUNDED, BigDecimal.ZERO, "Refund recorded without prior charge");
                 paymentRepository.save(payment);
             }
+            paymentMetrics.recordRefund();
 
             producer.publishPaymentRefunded(new PaymentRefunded(event.orderId()));
         } finally {

@@ -1,0 +1,292 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Saga Overview & System Throughput",
+      "type": "row"
+    },
+    {
+      "id": 1,
+      "title": "Orders Per Second",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(omniroute_orders_created_total[30s])) or vector(0)",
+          "legendFormat": "Orders Created / sec",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(omniroute_orders_completed_total[30s])) or vector(0)",
+          "legendFormat": "Orders Completed / sec",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15
+          },
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Saga Success Rate (%)",
+      "type": "stat",
+      "gridPos": { "h": 7, "w": 4, "x": 8, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "(sum(increase(omniroute_orders_completed_total[5m])) / (sum(increase(omniroute_orders_completed_total[5m])) + sum(increase(omniroute_orders_failed_total[5m])))) * 100 or vector(100)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 70 },
+              { "color": "green", "value": 85 }
+            ]
+          },
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Failure Rate (%)",
+      "type": "stat",
+      "gridPos": { "h": 7, "w": 4, "x": 12, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "(sum(increase(omniroute_orders_failed_total[5m])) / (sum(increase(omniroute_orders_completed_total[5m])) + sum(increase(omniroute_orders_failed_total[5m])))) * 100 or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 15 },
+              { "color": "red", "value": 30 }
+            ]
+          },
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "p95 Saga Duration",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(omniroute_orders_saga_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p95 Saga Latency",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(omniroute_orders_saga_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p50 Saga Latency",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          },
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "id": 101,
+      "title": "Resilience & Fleet Operations",
+      "type": "row"
+    },
+    {
+      "id": 5,
+      "title": "Active Trucks Tracked",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "omniroute_fleet_trucks_tracked or vector(0)",
+          "legendFormat": "Trucks",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "none"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Payment Circuit Breaker State",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "resilience4j_circuitbreaker_state{name=\"paymentService\", state=\"closed\"} * 0 + resilience4j_circuitbreaker_state{name=\"paymentService\", state=\"half_open\"} * 1 + resilience4j_circuitbreaker_state{name=\"paymentService\", state=\"open\"} * 2 or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "text": "CLOSED (Healthy)", "color": "green" }, "1": { "text": "HALF-OPEN", "color": "orange" }, "2": { "text": "OPEN (Tripped)", "color": "red" } }, "type": "value" }
+          ]
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Kafka Consumer Observation Latency & Lag",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "sum(spring_kafka_listener_seconds_max) by (name) or vector(0)",
+          "legendFormat": "Max Listener Latency: {{name}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          },
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+      "id": 102,
+      "title": "Subsystem Metrics (Warehouse, Payment, Simulator)",
+      "type": "row"
+    },
+    {
+      "id": 8,
+      "title": "Warehouse Reservations (Created vs Released)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(omniroute_warehouse_reservations_created_total[30s])) or vector(0)",
+          "legendFormat": "Reservations Created / s",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(omniroute_warehouse_reservations_released_total[30s])) or vector(0)",
+          "legendFormat": "Reservations Released / s",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth" },
+          "unit": "ops"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Payment Authorizations (Charges vs Failures)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(omniroute_payment_charges_total[30s])) or vector(0)",
+          "legendFormat": "Charges / s",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(omniroute_payment_failures_total[30s])) or vector(0)",
+          "legendFormat": "Failures / s",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth" },
+          "unit": "ops"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Simulator GPS Telemetry Throughput",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(omniroute_simulator_events_sent_total[30s])) or vector(0)",
+          "legendFormat": "GPS Events / sec",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth" },
+          "unit": "events/s"
+        }
+      }
+    }
+  ],
+  "refresh": "2s",
+  "schemaVersion": 39,
+  "tags": ["omniroute", "saga", "observability"],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": ["1s", "2s", "5s", "10s"]
+  },
+  "timezone": "browser",
+  "title": "OmniRoute - Observability & Distributed Transactions",
+  "uid": "omniroute-main",
+  "version": 1
+}

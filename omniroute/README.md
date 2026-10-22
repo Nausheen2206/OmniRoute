@@ -210,20 +210,39 @@ Currently, services commit the local DB transaction first, and then publish to K
 From the `omniroute` folder:
 ```powershell
 cd omniroute
-docker compose up --build
+docker compose up --build -d
 ```
 This launches:
 * **Kafka** (`localhost:29092` host, `kafka:9092` internal)
 * **Kafka UI** (`http://localhost:8090`)
 * **PostgreSQL** (`localhost:5432`) with `orders_db`, `payments_db`, `warehouse_db`
-* **Order Service** (`http://localhost:8081`)
-* **Payment Service** (`http://localhost:8082`)
-* **Warehouse Service** (`http://localhost:8083`)
-* **Fleet Routing Service** (`http://localhost:8084`)
-* **Telemetry Simulator** (`http://localhost:8085` generating 200 trucks)
-* **API Gateway** (`http://localhost:8080`)
+* **Order Service** (`http://localhost:8081`, Actuator: `/actuator/prometheus`)
+* **Payment Service** (`http://localhost:8082`, Actuator: `/actuator/prometheus`)
+* **Warehouse Service** (`http://localhost:8083`, Actuator: `/actuator/prometheus`)
+* **Fleet Routing Service** (`http://localhost:8084`, Actuator: `/actuator/prometheus`)
+* **Telemetry Simulator** (`http://localhost:8085`, Actuator: `/actuator/prometheus`)
+* **API Gateway** (`http://localhost:8080`, Actuator: `/actuator/prometheus`)
+* **Prometheus** (`http://localhost:9090` - 2s scrape interval for all 6 services)
+* **Grafana** (`http://localhost:3000` - user: `admin`, pass: `admin`, auto-provisioned dashboards)
+* **Jaeger Tracing** (`http://localhost:16686` - end-to-end distributed traces across HTTP & Kafka)
 
-### B. Launch the JavaFX Desktop Client
+### B. Observability & Tracing Verification
+OmniRoute features end-to-end observability with Prometheus, Grafana, and Jaeger:
+
+1. **Grafana Dashboards**: Access [http://localhost:3000](http://localhost:3000) to view the provisioned `OmniRoute - Observability & Distributed Transactions` dashboard:
+   * Orders per second & throughput
+   * Saga success rate vs. failure rate
+   * End-to-end P95 saga duration histogram
+   * Kafka consumer lag per consumer group
+   * Circuit breaker state gauge
+   * Real-time fleet vehicles tracked & routing latency
+2. **Jaeger Distributed Tracing**: Access [http://localhost:16686](http://localhost:16686) to inspect traces across all 5 participating services (`gateway` -> `order-service` -> `warehouse-service` -> `payment-service` -> `fleet-routing`). Trace context (`traceparent`, `tracestate`) is automatically propagated across Kafka headers by Spring Kafka + OpenTelemetry. Every saga step injects `orderId`, `traceId`, and `spanId` into MDC logging.
+3. **Automated Observability Verification Script**:
+```powershell
+powershell -File .\scripts\verify-observability.ps1
+```
+
+### C. Launch the JavaFX Desktop Client
 The desktop client runs on the host machine and communicates directly with the Gateway:
 ```powershell
 cd omniroute
@@ -233,16 +252,11 @@ mvn -pl desktop-client javafx:run
 * **Fleet Tab**: Real-time radar Canvas tracking all 200 trucks moving live at 500ms intervals with dispatch lines.
 * **Inventory Tab**: Live warehouse stock tracking with availability ratio indicators.
 
-### C. Run All Unit & Integration Tests
+### D. Run Regression Gate & Automated Tests
+To run the automated regression gate checking service health, $120 happy path, $13.13 forced failure compensation, and the 20-order burst inventory consistency invariant:
 ```powershell
-cd omniroute
-mvn clean verify
+powershell -File .\scripts\regression-gate.ps1
 ```
-Runs:
-* 43 State Machine unit tests
-* 6 Warehouse stock reservation, exhaustion, and idempotency tests
-* 6 Haversine geodesic and nearest-truck selection tests
-* 5 Full Saga lifecycle integration tests using Awaitility
 
 ---
 
@@ -252,15 +266,16 @@ To run an automated test that places **100 random orders** (with 10% injected pa
 
 #### On Windows (PowerShell):
 ```powershell
-.\omniroute\scripts\demo.ps1
+.\scripts\demo.ps1
 ```
 
 #### On Linux / macOS / Git Bash:
 ```bash
-./omniroute/scripts/demo.sh
+./scripts/demo.sh
 ```
 
 #### SQL Direct Query:
 ```powershell
 docker exec -i omniroute-postgres psql -U postgres -d warehouse_db < omniroute/scripts/verify-consistency.sql
 ```
+

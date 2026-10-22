@@ -26,15 +26,18 @@ public class WarehouseService {
     private final ReservationRepository reservationRepository;
     private final ProcessedEventRepository processedEventRepository;
     private final WarehouseEventProducer producer;
+    private final com.omniroute.warehouse.metrics.WarehouseMetrics warehouseMetrics;
 
     public WarehouseService(InventoryRepository inventoryRepository,
                             ReservationRepository reservationRepository,
                             ProcessedEventRepository processedEventRepository,
-                            WarehouseEventProducer producer) {
+                            WarehouseEventProducer producer,
+                            com.omniroute.warehouse.metrics.WarehouseMetrics warehouseMetrics) {
         this.inventoryRepository = inventoryRepository;
         this.reservationRepository = reservationRepository;
         this.processedEventRepository = processedEventRepository;
         this.producer = producer;
+        this.warehouseMetrics = warehouseMetrics;
     }
 
     @Transactional
@@ -93,6 +96,7 @@ public class WarehouseService {
 
                 Reservation res = new Reservation(event.orderId(), item.sku(), item.quantity(), ReservationStatus.ACTIVE);
                 reservationRepository.save(res);
+                warehouseMetrics.recordReservationCreated();
             }
 
             log.info("Successfully reserved inventory for order {}. Publishing InventoryLocked.", event.orderId());
@@ -130,6 +134,7 @@ public class WarehouseService {
                 }
                 res.setStatus(ReservationStatus.RELEASED);
                 reservationRepository.save(res);
+                warehouseMetrics.recordReservationReleased();
             }
 
             log.info("Released {} reservations for order {}. Restored stock. Publishing InventoryReleased.",

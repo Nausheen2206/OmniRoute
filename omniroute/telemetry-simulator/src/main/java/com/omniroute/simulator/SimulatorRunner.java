@@ -19,6 +19,7 @@ public class SimulatorRunner implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(SimulatorRunner.class);
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final com.omniroute.simulator.metrics.SimulatorMetrics simulatorMetrics;
 
     @Value("${simulator.truck-count:200}")
     private int truckCount;
@@ -35,8 +36,10 @@ public class SimulatorRunner implements CommandLineRunner {
     @Value("${simulator.radius-degrees:0.15}")
     private double radiusDegrees;
 
-    public SimulatorRunner(KafkaTemplate<String, Object> kafkaTemplate) {
+    public SimulatorRunner(KafkaTemplate<String, Object> kafkaTemplate,
+                           com.omniroute.simulator.metrics.SimulatorMetrics simulatorMetrics) {
         this.kafkaTemplate = kafkaTemplate;
+        this.simulatorMetrics = simulatorMetrics;
     }
 
     @Override
@@ -75,6 +78,7 @@ public class SimulatorRunner implements CommandLineRunner {
 
                 TruckPositionUpdated event = new TruckPositionUpdated(truckId, currentLat, currentLon);
                 kafkaTemplate.send(Topics.FLEET_GPS, truckId, event);
+                simulatorMetrics.recordEventSent();
 
                 Thread.sleep(intervalMs);
             } catch (InterruptedException e) {

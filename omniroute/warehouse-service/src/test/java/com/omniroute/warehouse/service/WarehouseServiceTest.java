@@ -28,6 +28,7 @@ class WarehouseServiceTest {
     private ReservationRepository reservationRepository;
     private ProcessedEventRepository processedEventRepository;
     private WarehouseEventProducer producer;
+    private com.omniroute.warehouse.metrics.WarehouseMetrics warehouseMetrics;
     private WarehouseService warehouseService;
 
     @BeforeEach
@@ -36,12 +37,14 @@ class WarehouseServiceTest {
         reservationRepository = mock(ReservationRepository.class);
         processedEventRepository = mock(ProcessedEventRepository.class);
         producer = mock(WarehouseEventProducer.class);
+        warehouseMetrics = mock(com.omniroute.warehouse.metrics.WarehouseMetrics.class);
 
         warehouseService = new WarehouseService(
                 inventoryRepository,
                 reservationRepository,
                 processedEventRepository,
-                producer
+                producer,
+                warehouseMetrics
         );
     }
 
