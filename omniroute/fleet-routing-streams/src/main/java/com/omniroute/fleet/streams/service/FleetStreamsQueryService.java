@@ -37,6 +37,15 @@ public class FleetStreamsQueryService {
     @Value("${fleet.stale-timeout-seconds:30}")
     private long staleTimeoutSeconds = 30;
 
+    @Value("${fleet.max-returned-trucks:300}")
+    private int maxReturnedTrucks = 300;
+
+    @Value("${fleet.hub-lat:11.0168}")
+    private double hubLat = 11.0168;
+
+    @Value("${fleet.hub-lon:76.9558}")
+    private double hubLon = 76.9558;
+
     public FleetStreamsQueryService(
             @Autowired(required = false) StreamsBuilderFactoryBean streamsFactoryBean,
             FleetStreamsMetrics metrics,
@@ -64,7 +73,31 @@ public class FleetStreamsQueryService {
         } catch (Exception e) {
             log.warn("Error querying trucks state store: {}", e.getMessage());
         }
-        return Collections.unmodifiableCollection(list);
+
+        if (list.size() <= maxReturnedTrucks) {
+            return Collections.unmodifiableCollection(list);
+        }
+
+        Instant now = Instant.now();
+        List<TruckState> assignedTrucks = new ArrayList<>();
+        List<TruckState> availableTrucks = new ArrayList<>();
+
+        for (TruckState truck : list) {
+            if (truck.busyUntil() != null && truck.busyUntil().isAfter(now)) {
+                assignedTrucks.add(truck);
+            } else {
+                availableTrucks.add(truck);
+            }
+        }
+
+        availableTrucks.sort(Comparator.comparingDouble(t ->
+                GridIndex.haversineDistance(hubLat, hubLon, t.lat(), t.lon())));
+
+        int remainingSlots = Math.max(0, maxReturnedTrucks - assignedTrucks.size());
+        List<TruckState> result = new ArrayList<>(assignedTrucks);
+        result.addAll(availableTrucks.subList(0, Math.min(remainingSlots, availableTrucks.size())));
+
+        return Collections.unmodifiableCollection(result);
     }
 
     public List<Assignment> getRecentAssignments() {

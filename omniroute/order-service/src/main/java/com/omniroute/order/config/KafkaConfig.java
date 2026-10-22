@@ -56,6 +56,6 @@ public class KafkaConfig {
     @Bean public NewTopic paymentEventsTopic() { return TopicBuilder.name(Topics.PAYMENT_EVENTS).partitions(3).replicas(1).build(); }
     @Bean public NewTopic warehouseCommandsTopic() { return TopicBuilder.name(Topics.WAREHOUSE_COMMANDS).partitions(3).replicas(1).build(); }
     @Bean public NewTopic paymentCommandsTopic() { return TopicBuilder.name(Topics.PAYMENT_COMMANDS).partitions(3).replicas(1).build(); }
-    @Bean public NewTopic fleetGpsTopic() { return TopicBuilder.name(Topics.FLEET_GPS).partitions(3).replicas(1).build(); }
+    @Bean public NewTopic fleetGpsTopic() { return TopicBuilder.name(Topics.FLEET_GPS).partitions(12).replicas(1).build(); }
     @Bean public NewTopic routingCommandsTopic() { return TopicBuilder.name(Topics.ROUTING_COMMANDS).partitions(3).replicas(1).build(); }
 }

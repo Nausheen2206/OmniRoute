@@ -165,6 +165,35 @@ services:
       - "8084:8084"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      FLEET_GPS_CONCURRENCY: ${FLEET_GPS_CONCURRENCY:-4}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+    depends_on:
+      kafka:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health | grep UP || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 25s
+    networks:
+      - omniroute-net
+
+  fleet-routing-replica:
+    profiles: ["scale", "highthroughput"]
+    build:
+      context: .
+      dockerfile: fleet-routing/Dockerfile
+    container_name: omniroute-fleet-routing-replica
+    hostname: fleet-routing-replica
+    ports:
+      - "8087:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      FLEET_GPS_CONCURRENCY: ${FLEET_GPS_CONCURRENCY:-4}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
@@ -192,6 +221,7 @@ services:
       - "8086:8084"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      STREAM_THREADS: ${STREAM_THREADS:-4}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
@@ -220,7 +250,8 @@ services:
       - "8085:8085"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      TRUCK_COUNT: 200
+      TRUCK_COUNT: ${TRUCK_COUNT:-200}
+      EMIT_INTERVAL_MS: ${EMIT_INTERVAL_MS:-500}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:

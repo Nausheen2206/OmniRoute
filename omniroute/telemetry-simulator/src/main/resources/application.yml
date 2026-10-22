@@ -5,23 +5,26 @@ spring:
   application:
     name: telemetry-simulator
   kafka:
-    bootstrap-servers: localhost:29092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: 1
+      compression-type: lz4
       properties:
         spring.json.add.type.headers: true
         linger.ms: 20
-        batch.size: 65536
+        batch.size: 131072
+        max.in.flight.requests.per.connection: 5
     template:
       observation-enabled: true
 
 simulator:
   truck-count: ${TRUCK_COUNT:200}
-  interval-ms: 500
-  center-lat: 11.0168
-  center-lon: 76.9558
-  radius-degrees: 0.15
+  interval-ms: ${EMIT_INTERVAL_MS:500}
+  center-lat: ${CENTER_LAT:11.0168}
+  center-lon: ${CENTER_LON:76.9558}
+  radius-degrees: ${RADIUS_DEGREES:0.15}
 
 management:
   endpoints:

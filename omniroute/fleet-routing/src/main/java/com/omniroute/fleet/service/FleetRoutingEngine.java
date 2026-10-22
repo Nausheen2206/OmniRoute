@@ -24,6 +24,15 @@ public class FleetRoutingEngine {
     @Value("${fleet.busy-duration-seconds:60}")
     private long busyDurationSeconds = 60;
 
+    @Value("${fleet.max-returned-trucks:300}")
+    private int maxReturnedTrucks = 300;
+
+    @Value("${fleet.hub-lat:11.0168}")
+    private double hubLat = 11.0168;
+
+    @Value("${fleet.hub-lon:76.9558}")
+    private double hubLon = 76.9558;
+
     public void updatePosition(String truckId, double lat, double lon, Instant timestamp) {
         truckMap.compute(truckId, (id, current) -> {
             Instant busyUntil = current != null ? current.busyUntil() : null;
@@ -65,7 +74,31 @@ public class FleetRoutingEngine {
     }
 
     public Collection<TruckState> getAllTrucks() {
-        return Collections.unmodifiableCollection(truckMap.values());
+        if (truckMap.size() <= maxReturnedTrucks) {
+            return Collections.unmodifiableCollection(truckMap.values());
+        }
+
+        Instant now = Instant.now();
+        List<TruckState> assignedTrucks = new ArrayList<>();
+        List<TruckState> availableTrucks = new ArrayList<>();
+
+        for (TruckState truck : truckMap.values()) {
+            if (truck.busyUntil() != null && truck.busyUntil().isAfter(now)) {
+                assignedTrucks.add(truck);
+            } else {
+                availableTrucks.add(truck);
+            }
+        }
+
+        // Sort available trucks by distance to central hub
+        availableTrucks.sort(Comparator.comparingDouble(t ->
+                HaversineDistance.calculate(hubLat, hubLon, t.lat(), t.lon())));
+
+        int remainingSlots = Math.max(0, maxReturnedTrucks - assignedTrucks.size());
+        List<TruckState> result = new ArrayList<>(assignedTrucks);
+        result.addAll(availableTrucks.subList(0, Math.min(remainingSlots, availableTrucks.size())));
+
+        return Collections.unmodifiableCollection(result);
     }
 
     public List<Assignment> getRecentAssignments() {

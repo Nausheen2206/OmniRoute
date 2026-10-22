@@ -94,4 +94,25 @@ class FleetRoutingEngineTest {
         Optional<Assignment> assignment = routingEngine.assignNearestTruck("order-none", WAREHOUSE_LAT, WAREHOUSE_LON);
         assertThat(assignment).isEmpty();
     }
+
+    @Test
+    @DisplayName("Should throttle returned trucks and guarantee inclusion of assigned trucks")
+    void shouldThrottleReturnedTrucksAndKeepAssigned() {
+        org.springframework.test.util.ReflectionTestUtils.setField(routingEngine, "maxReturnedTrucks", 5);
+        Instant now = Instant.now();
+
+        // 10 trucks at different distances
+        for (int i = 1; i <= 10; i++) {
+            routingEngine.updatePosition("TRUCK-" + i, 11.0 + (i * 0.01), 76.9 + (i * 0.01), now);
+        }
+
+        // Assign truck 10 (furthest one)
+        routingEngine.assignNearestTruck("order-far", 11.10, 77.00);
+
+        var trucks = routingEngine.getAllTrucks();
+        assertThat(trucks).hasSize(5);
+
+        // Assigned truck must be included regardless of distance
+        assertThat(trucks).extracting("truckId").contains("TRUCK-10");
+    }
 }

@@ -44,11 +44,11 @@ public class SimulatorRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        log.info("Starting Telemetry Simulator with {} trucks on virtual threads...", truckCount);
+        log.info("Starting Telemetry Simulator with {} trucks on virtual threads (emit interval: {}ms)...", truckCount, intervalMs);
         ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
         for (int i = 1; i <= truckCount; i++) {
-            String truckId = String.format("TRUCK-%03d", i);
+            String truckId = truckCount > 999 ? String.format("TRUCK-%05d", i) : String.format("TRUCK-%03d", i);
             executor.submit(() -> runTruckSimulation(truckId));
         }
     }

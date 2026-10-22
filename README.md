@@ -77,9 +77,9 @@ flowchart TD
 | `omniroute.warehouse.events` | `warehouse-service` | `order-service` | `InventoryLocked`, `InventoryLockFailed`, `InventoryReleased` | Inventory reservation and release confirmations |
 | `omniroute.payment.commands` | `order-service` | `payment-service` | `PaymentRequested`, `RefundPayment` | Payment authorization & refund requests |
 | `omniroute.payment.events` | `payment-service` | `order-service` | `PaymentCompleted`, `PaymentFailed`, `PaymentRefunded` | Payment status updates and failure notices |
-| `omniroute.fleet.gps` | `telemetry-simulator` | `fleet-routing` | `TruckPositionUpdated` | High-throughput GPS updates (200 vehicles @ 500ms) |
+| `omniroute.fleet.gps` | `telemetry-simulator` | `fleet-routing`, `fleet-routing-streams` | `TruckPositionUpdated` | High-throughput GPS updates (up to 10,000+ events/sec) |
 
-Each topic is configured with **3 partitions**, a replication factor of 1, and an associated Dead Letter Topic (`<topic>.DLT`) for poison pill handling.
+Saga event topics are configured with **3 partitions**, and `omniroute.fleet.gps` is configured with **12 partitions** for high-throughput parallel ingestion, consumer-group horizontal scaling, and Streams task distribution. All topics have replication factor 1 and Dead Letter Topics (`<topic>.DLT`).
 
 ---
 
@@ -205,7 +205,14 @@ OmniRoute features two interchangeable vehicle dispatch engines:
   * **Concentric Chebyshev Rings**: When an `OrderAllocated` event occurs, the processor expands radial rings (`ring 0, 1, ..., maxRings`) outward from the warehouse coordinate, calculating exact Haversine distance only for vehicles in candidate cells.
   * **Tumbling Window Aggregations**: Maintains 30-second windowed counts of telemetry updates per cell to measure traffic density.
   * **Exactly-Once Semantics (`processing.guarantee: exactly_once_v2`)**: Guarantees atomic state updates and dispatch event generation.
-  * **Interactive Query REST API**: Direct key-value state store queries on `/fleet/trucks`, `/fleet/cells`, and `/fleet/trucks/assignments`.
+### 6. High-Throughput Telemetry (10,000+ Events/Sec) & Client-Side Sampling
+To stress test the system under industrial-scale telemetry loads:
+* **Configurable Virtual-Thread Generation**: The `telemetry-simulator` scales vehicle count (`TRUCK_COUNT`) and emission frequency (`EMIT_INTERVAL_MS`). With 5,000 trucks at 500ms (or 2,000 trucks at 200ms), it sustains **10,000+ events per second**.
+* **Producer Batching & Compression**: Tuned for high throughput using LZ4 block compression (`compression-type: lz4`), 128KB batch sizes (`batch.size: 131072`), 20ms linger (`linger.ms: 20`), and `acks=1` for telemetry events.
+* **12-Partition Ingestion & Horizontal Scaling**: `omniroute.fleet.gps` is partitioned across 12 Kafka partitions with 4 concurrent listener threads per routing instance, supporting multi-container scaling via `fleet-routing-replica` (`--profile scale`).
+* **Server-Side UI Protection & Sampling**: To keep the JavaFX radar running at a fluid 60 FPS under massive event floods, the routing API samples and bounds returned trucks (`max-returned-trucks: 300`):
+  1. **All Active Dispatches Retained**: Vehicles with active delivery assignments are unconditionally returned with their routing lines.
+  2. **Nearest-to-Hub Filtering**: Remaining slots are filled with the closest available trucks relative to the central distribution hub.
 
 ---
 
@@ -242,6 +249,15 @@ To start the Kafka Streams spatial windowing engine alongside the cluster:
 docker compose --profile streams up --build
 ```
 The streams engine runs on port `8086` (`http://localhost:8086/actuator/health`, `http://localhost:8086/fleet/cells`) with RocksDB persistent state in docker volume `streams_data`.
+
+#### Running High-Throughput Telemetry (10,000+ eps) & Horizontally Scaled Routing:
+```powershell
+$env:TRUCK_COUNT="5000"; $env:EMIT_INTERVAL_MS="500"; docker compose --profile scale up --build -d
+```
+To verify telemetry throughput and radar latency:
+```powershell
+.\omniroute\scripts\verify-throughput.ps1
+```
 
 ### B. Launch the JavaFX Desktop Client
 The desktop client runs on the host machine and communicates directly with the Gateway:

@@ -263,8 +263,13 @@
       "targets": [
         {
           "expr": "sum(rate(omniroute_simulator_events_sent_total[30s])) or vector(0)",
-          "legendFormat": "GPS Events / sec",
+          "legendFormat": "30s Average (events/s)",
           "refId": "A"
+        },
+        {
+          "expr": "sum(omniroute_simulator_events_per_second) or vector(0)",
+          "legendFormat": "Instantaneous (events/s)",
+          "refId": "B"
         }
       ],
       "fieldConfig": {

@@ -13,7 +13,8 @@ fleet:
   max-rings: 10
   window-seconds: 30
   state-dir: ${STATE_DIR:/tmp/kafka-streams/fleet-routing-streams}
-  stream-threads: 2
+  stream-threads: ${STREAM_THREADS:4}
+  max-returned-trucks: ${MAX_RETURNED_TRUCKS:300}
   processing-guarantee: exactly_once_v2
 
 management:

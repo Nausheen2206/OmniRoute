@@ -5,16 +5,20 @@ spring:
   application:
     name: fleet-routing
   kafka:
-    bootstrap-servers: localhost:29092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
     consumer:
       group-id: fleet-routing-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      max-poll-records: 2000
       properties:
         spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
         spring.json.trusted.packages: "*"
         spring.json.use.type.headers: true
+        max.poll.records: 2000
+        fetch.min.bytes: 65536
+        fetch.max.wait.ms: 50
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -28,6 +32,8 @@ spring:
 fleet:
   stale-timeout-seconds: 30
   busy-duration-seconds: 60
+  max-returned-trucks: ${MAX_RETURNED_TRUCKS:300}
+  gps-concurrency: ${FLEET_GPS_CONCURRENCY:3}
 
 management:
   endpoints:

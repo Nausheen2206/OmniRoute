@@ -1,0 +1,4 @@
+# High-throughput profile sustaining 10,000+ events per second
+simulator:
+  truck-count: ${TRUCK_COUNT:5000}
+  interval-ms: ${EMIT_INTERVAL_MS:500}

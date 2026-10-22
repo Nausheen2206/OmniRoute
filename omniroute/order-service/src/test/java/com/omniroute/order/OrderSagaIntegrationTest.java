@@ -43,9 +43,6 @@ public class OrderSagaIntegrationTest {
     @MockBean
     private OrderEventProducer producer;
 
-    @MockBean
-    private org.springframework.kafka.core.KafkaAdmin kafkaAdmin;
-
     @BeforeEach
     void setUp() {
         orderRepository.deleteAll();
