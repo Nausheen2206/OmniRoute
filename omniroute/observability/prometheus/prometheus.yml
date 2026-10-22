@@ -23,6 +23,11 @@ scrape_configs:
     static_configs:
       - targets: ["fleet-routing:8084"]
 
+  - job_name: "fleet-routing-streams"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ["fleet-routing-streams:8084"]
+
   - job_name: "telemetry-simulator"
     metrics_path: "/actuator/prometheus"
     static_configs:

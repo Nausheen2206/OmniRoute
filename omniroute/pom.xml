@@ -118,6 +118,7 @@
     <module>payment-service</module>
     <module>telemetry-simulator</module>
     <module>fleet-routing</module>
+    <module>fleet-routing-streams</module>
     <module>desktop-client</module>
   </modules>
 

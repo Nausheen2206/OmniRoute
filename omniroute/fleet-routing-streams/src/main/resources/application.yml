@@ -1,0 +1,42 @@
+server:
+  port: ${PORT:8084}
+
+spring:
+  application:
+    name: fleet-routing-streams
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+
+fleet:
+  stale-timeout-seconds: 30
+  busy-duration-seconds: 60
+  max-rings: 10
+  window-seconds: 30
+  state-dir: ${STATE_DIR:/tmp/kafka-streams/fleet-routing-streams}
+  stream-threads: 2
+  processing-guarantee: exactly_once_v2
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [${spring.application.name:},%X{traceId:-},%X{spanId:-},orderId=%X{orderId:-}] %m%n"

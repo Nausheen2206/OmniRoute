@@ -197,6 +197,16 @@ Currently, services commit the local DB transaction first, and then publish to K
 * **Current Mitigation**: The `OrderWatchdogService` periodically audits orders stuck in transitional states (`INVENTORY_LOCKED`, `PAYMENT_COMPLETED`) beyond a threshold and initiates recovery.
 * **Production Recommendation**: The **Transactional Outbox Pattern** with Debezium CDC (Change Data Capture) will be the future enhancement to make DB commits and message publication atomic.
 
+### 5. High-Throughput Spatial Routing: Classic vs. Kafka Streams Engine
+OmniRoute features two interchangeable vehicle dispatch engines:
+* **Classic Engine (`fleet-routing`)**: In-memory `ConcurrentHashMap` cache populated by Spring Kafka consumer listeners with linear O(N) distance scans.
+* **Streams Engine (`fleet-routing-streams`)**: Distributed, fault-tolerant topology leveraging **Kafka Streams**, **RocksDB state stores**, and **Chebyshev spatial grid partitioning**:
+  * **Geodesic Cell Indexing**: Telemetry is indexed into discrete geo-spatial cells (~5.5 km resolution, `c_latIdx_lonIdx`).
+  * **Concentric Chebyshev Rings**: When an `OrderAllocated` event occurs, the processor expands radial rings (`ring 0, 1, ..., maxRings`) outward from the warehouse coordinate, calculating exact Haversine distance only for vehicles in candidate cells.
+  * **Tumbling Window Aggregations**: Maintains 30-second windowed counts of telemetry updates per cell to measure traffic density.
+  * **Exactly-Once Semantics (`processing.guarantee: exactly_once_v2`)**: Guarantees atomic state updates and dispatch event generation.
+  * **Interactive Query REST API**: Direct key-value state store queries on `/fleet/trucks`, `/fleet/cells`, and `/fleet/trucks/assignments`.
+
 ---
 
 ## 6. How to Run
@@ -219,9 +229,19 @@ This launches:
 * **Order Service** (`http://localhost:8081`)
 * **Payment Service** (`http://localhost:8082`)
 * **Warehouse Service** (`http://localhost:8083`)
-* **Fleet Routing Service** (`http://localhost:8084`)
+* **Fleet Routing Service** (`http://localhost:8084` - Classic Engine)
 * **Telemetry Simulator** (`http://localhost:8085` generating 200 trucks)
 * **API Gateway** (`http://localhost:8080`)
+* **Jaeger Tracing** (`http://localhost:16686`)
+* **Prometheus** (`http://localhost:9090`)
+* **Grafana Dashboards** (`http://localhost:3000` - admin/admin)
+
+#### Running with Kafka Streams Spatial Routing Engine:
+To start the Kafka Streams spatial windowing engine alongside the cluster:
+```powershell
+docker compose --profile streams up --build
+```
+The streams engine runs on port `8086` (`http://localhost:8086/actuator/health`, `http://localhost:8086/fleet/cells`) with RocksDB persistent state in docker volume `streams_data`.
 
 ### B. Launch the JavaFX Desktop Client
 The desktop client runs on the host machine and communicates directly with the Gateway:

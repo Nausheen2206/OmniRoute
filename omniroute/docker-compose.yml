@@ -181,6 +181,35 @@ services:
     networks:
       - omniroute-net
 
+  fleet-routing-streams:
+    profiles: ["streams"]
+    build:
+      context: .
+      dockerfile: fleet-routing-streams/Dockerfile
+    container_name: omniroute-fleet-routing-streams
+    hostname: fleet-routing-streams
+    ports:
+      - "8086:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+    depends_on:
+      kafka:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health | grep UP || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 25s
+    volumes:
+      - streams_data:/data/kafka-streams
+    networks:
+      - omniroute-net
+
   telemetry-simulator:
     build:
       context: .
@@ -290,6 +319,7 @@ services:
 volumes:
   postgres_data:
   kafka_data:
+  streams_data:
 
 networks:
   omniroute-net:
