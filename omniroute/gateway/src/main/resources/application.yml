@@ -1,0 +1,47 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+      routes:
+        - id: order-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - RewritePath=/api/orders(?<segment>.*), /orders$\{segment}
+        - id: warehouse-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/inventory/**
+          filters:
+            - RewritePath=/api/inventory(?<segment>.*), /inventory$\{segment}
+        - id: fleet-routing
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/fleet/**
+          filters:
+            - RewritePath=/api/fleet(?<segment>.*), /fleet$\{segment}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

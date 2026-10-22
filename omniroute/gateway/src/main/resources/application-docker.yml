@@ -1,0 +1,22 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: order-service
+          uri: http://order-service:8081
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - RewritePath=/api/orders(?<segment>.*), /orders$\{segment}
+        - id: warehouse-service
+          uri: http://warehouse-service:8083
+          predicates:
+            - Path=/api/inventory/**
+          filters:
+            - RewritePath=/api/inventory(?<segment>.*), /inventory$\{segment}
+        - id: fleet-routing
+          uri: http://fleet-routing:8084
+          predicates:
+            - Path=/api/fleet/**
+          filters:
+            - RewritePath=/api/fleet(?<segment>.*), /fleet$\{segment}
