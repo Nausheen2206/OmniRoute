@@ -1,0 +1,28 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: telemetry-simulator
+  kafka:
+    bootstrap-servers: localhost:29092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: true
+        linger.ms: 20
+        batch.size: 65536
+
+simulator:
+  truck-count: ${TRUCK_COUNT:200}
+  interval-ms: 500
+  center-lat: 11.0168
+  center-lon: 76.9558
+  radius-degrees: 0.15
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

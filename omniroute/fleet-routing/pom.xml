@@ -12,6 +12,7 @@
   </parent>
 
   <artifactId>fleet-routing</artifactId>
+  
   <packaging>jar</packaging>
   <name>OmniRoute Fleet Routing</name>
   <description>Fleet Tracking and Dynamic Nearest-Truck Routing Service</description>
@@ -30,6 +31,7 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
+  
       <groupId>org.springframework.kafka</groupId>
       <artifactId>spring-kafka</artifactId>
     </dependency>
