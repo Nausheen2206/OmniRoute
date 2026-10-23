@@ -272,3 +272,65 @@
     -fx-font-size: 12px;
     -fx-text-fill: #94a3b8;
 }
+
+/* Resilience Badges */
+.badge-closed {
+    -fx-background-color: rgba(16, 185, 129, 0.2);
+    -fx-text-fill: #34d399;
+    -fx-border-color: #10b981;
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 6px 16px;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+.badge-open {
+    -fx-background-color: rgba(239, 68, 68, 0.2);
+    -fx-text-fill: #f87171;
+    -fx-border-color: #ef4444;
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 6px 16px;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+.badge-half-open {
+    -fx-background-color: rgba(245, 158, 11, 0.2);
+    -fx-text-fill: #fbbf24;
+    -fx-border-color: #f59e0b;
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 6px 16px;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+/* Sliders */
+.slider {
+    -fx-padding: 6px 0;
+}
+.slider .track {
+    -fx-background-color: #1e293b;
+    -fx-background-radius: 4px;
+    -fx-pref-height: 8px;
+}
+.slider .thumb {
+    -fx-background-color: #38bdf8;
+    -fx-background-radius: 10px;
+    -fx-pref-width: 18px;
+    -fx-pref-height: 18px;
+}
+.slider .thumb:hover {
+    -fx-background-color: #7dd3fc;
+    -fx-effect: dropshadow(three-pass-box, rgba(56, 189, 248, 0.6), 8, 0, 0, 0);
+}
+.slider .axis {
+    -fx-tick-label-fill: #64748b;
+    -fx-tick-length: 4px;
+}
+

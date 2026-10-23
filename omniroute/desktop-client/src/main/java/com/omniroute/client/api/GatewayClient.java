@@ -187,4 +187,73 @@ public class GatewayClient {
                 .thenApply(res -> res.statusCode() == 200)
                 .exceptionally(ex -> false);
     }
+
+    public CompletableFuture<PaymentConfigDto> fetchPaymentConfig() {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/api/demo/payment-config"))
+                .timeout(Duration.ofSeconds(3))
+                .GET()
+                .build();
+
+        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> {
+                    if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                        try {
+                            return objectMapper.readValue(response.body(), PaymentConfigDto.class);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to parse payment config", e);
+                        }
+                    } else {
+                        throw new RuntimeException("Payment config error (" + response.statusCode() + ")");
+                    }
+                });
+    }
+
+    public CompletableFuture<PaymentConfigDto> updatePaymentConfig(long latencyMs, double failureRate) {
+        try {
+            String json = objectMapper.writeValueAsString(new PaymentConfigDto(latencyMs, failureRate));
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + "/api/demo/payment-config"))
+                    .timeout(Duration.ofSeconds(4))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .build();
+
+            return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(response -> {
+                        if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                            try {
+                                return objectMapper.readValue(response.body(), PaymentConfigDto.class);
+                            } catch (Exception e) {
+                                return new PaymentConfigDto(latencyMs, failureRate);
+                            }
+                        } else {
+                            throw new RuntimeException("Failed updating payment config (" + response.statusCode() + "): " + response.body());
+                        }
+                    });
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+
+    public CompletableFuture<CircuitBreakerDto> fetchCircuitBreakerStatus() {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/api/orders/circuit-breaker"))
+                .timeout(Duration.ofSeconds(3))
+                .GET()
+                .build();
+
+        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> {
+                    if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                        try {
+                            return objectMapper.readValue(response.body(), CircuitBreakerDto.class);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to parse circuit breaker response", e);
+                        }
+                    } else {
+                        throw new RuntimeException("Circuit breaker endpoint error (" + response.statusCode() + ")");
+                    }
+                });
+    }
 }

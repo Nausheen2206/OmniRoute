@@ -26,6 +26,7 @@ public class OmniRouteApplication extends Application {
     private OrdersView ordersView;
     private FleetView fleetView;
     private InventoryView inventoryView;
+    private ResilienceView resilienceView;
     private StatusFooterView statusFooterView;
 
     private final AtomicInteger totalOrdersCount = new AtomicInteger(0);
@@ -63,6 +64,10 @@ public class OmniRouteApplication extends Application {
                 skus -> skuCount.set(skus)
         );
 
+        resilienceView = new ResilienceView(gatewayClient,
+                msg -> statusFooterView.setMessage(msg)
+        );
+
         // Tabs
         TabPane tabPane = new TabPane();
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
@@ -70,8 +75,9 @@ public class OmniRouteApplication extends Application {
         Tab ordersTab = new Tab("📦  Orders & Sagas", ordersView);
         Tab fleetTab = new Tab("🚚  Live Fleet Radar", fleetView);
         Tab inventoryTab = new Tab("🏭  Warehouse Inventory", inventoryView);
+        Tab resilienceTab = new Tab("⚡  Resilience & Chaos", resilienceView);
 
-        tabPane.getTabs().addAll(ordersTab, fleetTab, inventoryTab);
+        tabPane.getTabs().addAll(ordersTab, fleetTab, inventoryTab, resilienceTab);
 
         root.setTop(headerView);
         root.setCenter(tabPane);
@@ -133,6 +139,13 @@ public class OmniRouteApplication extends Application {
             } catch (Exception ignored) {}
         }, 1000, 2000, TimeUnit.MILLISECONDS);
 
+        // Circuit breaker & resilience refresh every 1.5 seconds
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                resilienceView.refreshCircuitBreaker();
+            } catch (Exception ignored) {}
+        }, 1000, 1500, TimeUnit.MILLISECONDS);
+
         // Gateway healthcheck & metric refresh every 3 seconds
         scheduler.scheduleAtFixedRate(() -> {
             try {
@@ -162,6 +175,7 @@ public class OmniRouteApplication extends Application {
         ordersView.refreshOrders();
         fleetView.refreshFleet();
         inventoryView.refreshInventory();
+        resilienceView.refreshCircuitBreaker();
     }
 
     private void shutdownScheduler() {
