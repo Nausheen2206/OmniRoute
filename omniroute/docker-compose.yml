@@ -168,6 +168,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       FLEET_GPS_CONCURRENCY: ${FLEET_GPS_CONCURRENCY:-4}
+      FLEET_BUSY_DURATION_SECONDS: ${FLEET_BUSY_DURATION_SECONDS:-2}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:

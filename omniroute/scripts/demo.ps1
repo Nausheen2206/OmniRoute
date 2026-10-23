@@ -29,9 +29,14 @@ try {
 # 2. Track initial state
 Write-Host "[2/4] Fetching initial warehouse stock..." -ForegroundColor Yellow
 $initialStock = Invoke-RestMethod -Uri "$GatewayUrl/api/inventory" -Method Get
+$initialStockMap = @{}
+foreach ($item in $initialStock) {
+    $initialStockMap[$item.sku] = [int]$item.availableQty
+}
 
 $skus = @("SKU-001", "SKU-002", "SKU-003", "SKU-004", "SKU-005")
 $rng = [System.Random]::new()
+$demoOrderIds = [System.Collections.Generic.HashSet[string]]::new()
 
 # 3. Disseminate orders
 Write-Host "[3/4] Dispatching $TotalOrders orders with simulated payment failure mix..." -ForegroundColor Yellow
@@ -60,6 +65,9 @@ for ($i = 1; $i -le $TotalOrders; $i++) {
 
     try {
         $res = Invoke-RestMethod -Uri "$GatewayUrl/api/orders" -Method Post -Body $body -ContentType "application/json"
+        if ($res.orderId) {
+            $demoOrderIds.Add($res.orderId) | Out-Null
+        }
     } catch {
         Write-Warning "Failed placing order $($i): $_"
     }
@@ -91,12 +99,13 @@ while ($waited -lt $maxWaitSeconds) {
     }
 }
 
-$completed = $orders | Where-Object { $_.status -eq "COMPLETED" }
-$failed = $orders | Where-Object { $_.status -eq "FAILED" }
+$demoOrders = $orders | Where-Object { $demoOrderIds.Contains($_.id) }
+$completed = $demoOrders | Where-Object { $_.status -eq "COMPLETED" }
+$failed = $demoOrders | Where-Object { $_.status -eq "FAILED" }
 
 Write-Host ""
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " Order Processing Summary" -ForegroundColor Cyan
+Write-Host " Order Processing Summary (This Run)" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "Completed Orders : $($completed.Count)" -ForegroundColor Green
 Write-Host "Failed Orders    : $($failed.Count) (Compensated)" -ForegroundColor Red
@@ -132,7 +141,7 @@ Write-Host ("-" * 60)
 
 foreach ($inv in $currentInventory) {
     $sku = $inv.sku
-    $initial = 1000
+    $initial = if ($initialStockMap.ContainsKey($sku)) { $initialStockMap[$sku] } else { 1000 }
     $consumed = if ($completedConsumption.ContainsKey($sku)) { $completedConsumption[$sku] } else { 0 }
     $expected = $initial - $consumed
     $actual = $inv.availableQty

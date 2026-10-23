@@ -33,6 +33,7 @@ public class OrderWatchdogService {
     public void scanStuckOrders() {
         Instant cutoff = Instant.now().minusSeconds(stuckTimeoutSeconds);
         Set<OrderStatus> stuckCandidates = Set.of(
+                OrderStatus.PENDING,
                 OrderStatus.INVENTORY_LOCKED,
                 OrderStatus.PAYMENT_COMPLETED
         );

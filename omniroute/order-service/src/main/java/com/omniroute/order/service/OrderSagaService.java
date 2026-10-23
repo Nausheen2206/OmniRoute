@@ -63,7 +63,7 @@ public class OrderSagaService {
             }
 
             Order order = new Order(orderId, customerId, itemsJson, totalAmount, OrderStatus.PENDING);
-            orderRepository.save(order);
+            orderRepository.saveAndFlush(order);
             orderMetrics.recordOrderCreated();
 
             OrderCreated createdEvent = new OrderCreated(orderId, customerId, items, totalAmount, order.getWarehouseLat(), order.getWarehouseLon());
@@ -94,15 +94,28 @@ public class OrderSagaService {
         }
     }
 
+    private Order findOrderWithRetry(String orderId) {
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null) {
+            for (int i = 0; i < 5 && order == null; i++) {
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException ignored) {}
+                order = orderRepository.findById(orderId).orElse(null);
+            }
+        }
+        return order;
+    }
+
     @Transactional
     public void handleInventoryLocked(InventoryLocked event) {
         MDC.put("orderId", event.orderId());
         try {
             if (!recordStep(event.orderId(), "INVENTORY_LOCKED", event.eventId())) return;
 
-            Order order = orderRepository.findById(event.orderId()).orElse(null);
+            Order order = findOrderWithRetry(event.orderId());
             if (order == null) {
-                log.warn("Order {} not found for InventoryLocked event", event.orderId());
+                log.warn("Order {} not found for InventoryLocked event after retry", event.orderId());
                 return;
             }
 
@@ -128,7 +141,7 @@ public class OrderSagaService {
         try {
             if (!recordStep(event.orderId(), "INVENTORY_LOCK_FAILED", event.eventId())) return;
 
-            Order order = orderRepository.findById(event.orderId()).orElse(null);
+            Order order = findOrderWithRetry(event.orderId());
             if (order == null) return;
 
             order.setFailureReason(event.reason());
@@ -150,7 +163,7 @@ public class OrderSagaService {
         try {
             if (!recordStep(event.orderId(), "PAYMENT_COMPLETED", event.eventId())) return;
 
-            Order order = orderRepository.findById(event.orderId()).orElse(null);
+            Order order = findOrderWithRetry(event.orderId());
             if (order == null) return;
 
             stateMachine.transition(order, OrderStatus.PAYMENT_COMPLETED);
@@ -169,7 +182,7 @@ public class OrderSagaService {
         try {
             if (!recordStep(event.orderId(), "TRUCK_ASSIGNED", event.eventId())) return;
 
-            Order order = orderRepository.findById(event.orderId()).orElse(null);
+            Order order = findOrderWithRetry(event.orderId());
             if (order == null) return;
 
             stateMachine.transition(order, OrderStatus.COMPLETED);
@@ -191,7 +204,7 @@ public class OrderSagaService {
         try {
             if (!recordStep(event.orderId(), "PAYMENT_FAILED", event.eventId())) return;
 
-            Order order = orderRepository.findById(event.orderId()).orElse(null);
+            Order order = findOrderWithRetry(event.orderId());
             if (order == null) return;
 
             order.setFailureReason(event.reason());
@@ -211,7 +224,7 @@ public class OrderSagaService {
         try {
             if (!recordStep(event.orderId(), "INVENTORY_RELEASED", event.eventId())) return;
 
-            Order order = orderRepository.findById(event.orderId()).orElse(null);
+            Order order = findOrderWithRetry(event.orderId());
             if (order == null) return;
 
             stateMachine.transition(order, OrderStatus.FAILED);
@@ -262,6 +275,11 @@ public class OrderSagaService {
                 stateMachine.transition(order, OrderStatus.COMPENSATING);
                 orderRepository.save(order);
                 producer.publishReleaseInventory(new ReleaseInventory(order.getId()));
+            } else if (order.getStatus() == OrderStatus.PENDING) {
+                producer.publishReleaseInventory(new ReleaseInventory(order.getId()));
+                stateMachine.transition(order, OrderStatus.FAILED);
+                orderRepository.save(order);
+                orderMetrics.recordOrderFailed(reason);
             }
         } finally {
             MDC.remove("orderId");

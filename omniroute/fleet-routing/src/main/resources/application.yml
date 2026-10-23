@@ -31,7 +31,7 @@ spring:
 
 fleet:
   stale-timeout-seconds: 30
-  busy-duration-seconds: 60
+  busy-duration-seconds: ${FLEET_BUSY_DURATION_SECONDS:2}
   max-returned-trucks: ${MAX_RETURNED_TRUCKS:300}
   gps-concurrency: ${FLEET_GPS_CONCURRENCY:3}
 
