@@ -16,9 +16,12 @@ public class OrderEventProducer {
     private static final Logger log = LoggerFactory.getLogger(OrderEventProducer.class);
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final com.omniroute.order.client.PaymentServiceClient paymentServiceClient;
 
-    public OrderEventProducer(KafkaTemplate<String, Object> kafkaTemplate) {
+    public OrderEventProducer(KafkaTemplate<String, Object> kafkaTemplate,
+                              com.omniroute.order.client.PaymentServiceClient paymentServiceClient) {
         this.kafkaTemplate = kafkaTemplate;
+        this.paymentServiceClient = paymentServiceClient;
     }
 
     public void publishOrderCreated(OrderCreated event) {
@@ -35,6 +38,8 @@ public class OrderEventProducer {
     public void publishPaymentRequested(PaymentRequested event) {
         MDC.put("orderId", event.orderId());
         try {
+            // Check availability of payment service; trips circuit breaker if payment service is down/stopped
+            paymentServiceClient.checkAvailability();
             log.info("Publishing PaymentRequested to {} for orderId {}, amount {}",
                     Topics.PAYMENT_COMMANDS, event.orderId(), event.amount());
             kafkaTemplate.send(Topics.PAYMENT_COMMANDS, event.orderId(), event);

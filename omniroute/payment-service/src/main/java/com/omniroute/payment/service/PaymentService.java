@@ -33,10 +33,10 @@ public class PaymentService {
     private final Random random = new Random();
 
     @Value("${payment.failure-rate:0.0}")
-    private double failureRate;
+    private volatile double failureRate;
 
     @Value("${payment.latency-ms:0}")
-    private long latencyMs;
+    private volatile long latencyMs;
 
     public PaymentService(PaymentRepository paymentRepository,
                           ProcessedEventRepository processedEventRepository,
@@ -148,5 +148,21 @@ public class PaymentService {
         } finally {
             MDC.remove("orderId");
         }
+    }
+
+    public double getFailureRate() {
+        return failureRate;
+    }
+
+    public void setFailureRate(double failureRate) {
+        this.failureRate = failureRate;
+    }
+
+    public long getLatencyMs() {
+        return latencyMs;
+    }
+
+    public void setLatencyMs(long latencyMs) {
+        this.latencyMs = latencyMs;
     }
 }

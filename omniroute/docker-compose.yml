@@ -80,6 +80,7 @@ services:
       - "8081:8081"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      PAYMENT_SERVICE_URL: http://payment-service:8082
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
@@ -137,6 +138,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       PAYMENT_FAILURE_RATE: "0.0"
+      DEMO_ENABLED: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:

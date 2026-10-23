@@ -112,8 +112,8 @@ public class OrderSagaService {
             PaymentRequested paymentCmd = new PaymentRequested(order.getId(), order.getTotalAmount());
             try {
                 producer.publishPaymentRequested(paymentCmd);
-            } catch (OrderEventProducer.PaymentCircuitBreakerOpenException e) {
-                log.warn("Circuit breaker fallback activated for order {}. Moving to PAYMENT_PENDING.", order.getId());
+            } catch (Exception e) {
+                log.warn("Circuit breaker fallback activated for order {}: {}. Moving to PAYMENT_PENDING.", order.getId(), e.getMessage());
                 stateMachine.transition(order, OrderStatus.PAYMENT_PENDING);
                 orderRepository.save(order);
             }

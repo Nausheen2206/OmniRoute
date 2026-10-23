@@ -43,6 +43,9 @@ payment:
   failure-rate: ${PAYMENT_FAILURE_RATE:0.0}
   latency-ms: ${PAYMENT_LATENCY_MS:0}
 
+demo:
+  enabled: ${DEMO_ENABLED:true}
+
 management:
   endpoints:
     web:

@@ -196,4 +196,71 @@ public class OrderSagaIntegrationTest {
             assertThat(o.getStatus()).isEqualTo(OrderStatus.PAYMENT_PENDING);
         });
     }
+
+    @Test
+    @DisplayName("Requirement 6: PAYMENT_PENDING recovers to PAYMENT_COMPLETED then COMPLETED")
+    void testPaymentPendingRecoversToCompleted() {
+        Order order = sagaService.createOrder(
+                "CUST-RECOVER",
+                List.of(new OrderItem("SKU-001", 1)),
+                BigDecimal.valueOf(80.00)
+        );
+
+        doThrow(new OrderEventProducer.PaymentCircuitBreakerOpenException("Circuit breaker open", new RuntimeException()))
+                .when(producer).publishPaymentRequested(any());
+
+        sagaService.handleInventoryLocked(new InventoryLocked(order.getId()));
+
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            Order o = orderRepository.findById(order.getId()).orElseThrow();
+            assertThat(o.getStatus()).isEqualTo(OrderStatus.PAYMENT_PENDING);
+        });
+
+        // Payment recovers
+        sagaService.handlePaymentCompleted(new PaymentCompleted(order.getId()));
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            Order o = orderRepository.findById(order.getId()).orElseThrow();
+            assertThat(o.getStatus()).isEqualTo(OrderStatus.PAYMENT_COMPLETED);
+        });
+
+        // Truck assigned -> COMPLETED
+        sagaService.handleTruckAssigned(new TruckAssigned(order.getId(), "TRUCK-99", 1.5));
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            Order o = orderRepository.findById(order.getId()).orElseThrow();
+            assertThat(o.getStatus()).isEqualTo(OrderStatus.COMPLETED);
+        });
+    }
+
+    @Test
+    @DisplayName("Requirement 7: PAYMENT_PENDING compensates and ends FAILED when retry window expires")
+    void testPaymentPendingCompensatesAfterTimeout() {
+        Order order = sagaService.createOrder(
+                "CUST-TIMEOUT",
+                List.of(new OrderItem("SKU-001", 1)),
+                BigDecimal.valueOf(80.00)
+        );
+
+        doThrow(new OrderEventProducer.PaymentCircuitBreakerOpenException("Circuit breaker open", new RuntimeException()))
+                .when(producer).publishPaymentRequested(any());
+
+        sagaService.handleInventoryLocked(new InventoryLocked(order.getId()));
+
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            Order o = orderRepository.findById(order.getId()).orElseThrow();
+            assertThat(o.getStatus()).isEqualTo(OrderStatus.PAYMENT_PENDING);
+        });
+
+        Order pendingOrder = orderRepository.findById(order.getId()).orElseThrow();
+        // Retry window expires -> compensate
+        sagaService.compensateStuckOrder(pendingOrder, "payment unavailable");
+        verify(producer).publishReleaseInventory(any(ReleaseInventory.class));
+
+        // Warehouse releases inventory
+        sagaService.handleInventoryReleased(new InventoryReleased(order.getId()));
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            Order o = orderRepository.findById(order.getId()).orElseThrow();
+            assertThat(o.getStatus()).isEqualTo(OrderStatus.FAILED);
+            assertThat(o.getFailureReason()).contains("payment unavailable");
+        });
+    }
 }

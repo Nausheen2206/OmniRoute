@@ -11,9 +11,12 @@ spring:
   flyway:
     enabled: false
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: localhost:29092
     listener:
       auto-startup: false
+    admin:
+      auto-create: false
+      fail-fast: false
 
 order:
   watchdog:

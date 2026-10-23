@@ -21,5 +21,8 @@ public interface OrderRepository extends JpaRepository<Order, String> {
             @Param("statuses") Collection<OrderStatus> statuses,
             @Param("cutoff") Instant cutoff
     );
+
+    List<Order> findByStatus(OrderStatus status);
+
     long countByStatus(OrderStatus status);
 }

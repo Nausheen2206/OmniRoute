@@ -20,3 +20,21 @@ spring:
             - Path=/api/fleet/**
           filters:
             - RewritePath=/api/fleet(?<segment>.*), /fleet$\{segment}
+        - id: payment-demo
+          uri: http://payment-service:8082
+          predicates:
+            - Path=/api/demo/**
+          filters:
+            - RewritePath=/api/demo(?<segment>.*), /demo$\{segment}
+        - id: order-dlt
+          uri: http://order-service:8081
+          predicates:
+            - Path=/api/dlt/**
+          filters:
+            - RewritePath=/api/dlt(?<segment>.*), /dlt$\{segment}
+        - id: order-circuitbreakers
+          uri: http://order-service:8081
+          predicates:
+            - Path=/api/actuator/circuitbreakers
+          filters:
+            - RewritePath=/api/actuator/circuitbreakers, /actuator/circuitbreakers

@@ -44,15 +44,24 @@ saga:
     interval-ms: 10000
     stuck-timeout-seconds: 30
 
+payment:
+  service:
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8082}
+  retry-window-seconds: ${PAYMENT_RETRY_WINDOW_SECONDS:60}
+  retry-interval-ms: ${PAYMENT_RETRY_INTERVAL_MS:2000}
+
 resilience4j:
   circuitbreaker:
     instances:
       paymentService:
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 5
+        minimum-number-of-calls: 3
         failure-rate-threshold: 50
-        wait-duration-in-open-state: 10000ms
-        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 2000ms
+        wait-duration-in-open-state: 5000ms
+        permitted-number-of-calls-in-half-open-state: 2
         automatic-transition-from-open-to-half-open-enabled: true
         register-health-indicator: true
 
